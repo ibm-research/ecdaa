@@ -17,13 +17,11 @@ package com.ibm.zurich.crypto;
 
 import iaik.security.ec.math.curve.AtePairingOverBarretoNaehrigCurveFactory;
 import iaik.security.ec.math.curve.ECPoint;
-import iaik.security.ec.math.curve.EllipticCurve;
 import iaik.security.ec.math.curve.Pairing;
 import iaik.security.ec.math.curve.PairingTypes;
-import iaik.security.ec.math.curve.PrimeCurveTypes;
+import iaik.security.ec.math.field.AbstractPrimeField;
 import iaik.security.ec.math.field.ExtensionFieldElement;
 import iaik.security.ec.math.field.PrimeCharacteristicField;
-import iaik.security.ec.math.field.PrimeField;
 import iaik.security.ec.math.field.PrimeFieldElement;
 import iaik.security.ec.math.field.QuadraticExtensionField;
 import iaik.security.ec.math.field.QuadraticExtensionFieldElement;
@@ -44,36 +42,85 @@ public class BNCurve {
 
 	private Pairing pairing;
 	private BigInteger order;
-	public static final int STAT_INDIST_PARAM = 80;
-	
-	/**
-	 * Defines the BN curves by their u-value
-	 * @param instantiation specifies the BN curve
-	 * @return The u-value defining the BN curve
-	 */
-	private BigInteger curveUValue(BNCurveInstantiation instantiation) {
-		switch(instantiation) {
-		case TPM_ECC_BN_P256: 
-			return new BigInteger("-7530851732716300289");
-		case TPM_ECC_BN_P638: 
-			return new BigInteger("365375408992443362629982744420548242302862098433");
-		case ECC_BN_DSD_P256: 
-			return new BigInteger("6917529027641089837");
-		case ECC_BN_ISOP512: 
-			return new BigInteger("128935115591136839671669293643286708227");
-		default:
-            throw new IllegalArgumentException("Unknown BNCurveInstantiation: " + instantiation);
-		}
-	}
+	private final ECPoint genG1;
+	private final ECPoint genG2;
+	public static final int STAT_INDIST_PARAM = 128;
 	
 	/**
 	 * Constructs a new BN curve
 	 * @param instantiation defines which curve will be used
 	 */
 	public BNCurve(BNCurveInstantiation instantiation) {
-		BigInteger u = curveUValue(instantiation);
-		this.pairing = AtePairingOverBarretoNaehrigCurveFactory.getPairing(PairingTypes.TYPE_3, u);
+		BigInteger u, b, genG1x, genG1y, genG2xa, genG2xb, genG2ya, genG2yb;
+		switch(instantiation) {
+		case TPM_ECC_BN_P256: {
+			//u = new BigInteger("-7530851732716300289");
+			//b = new BigInteger("3");
+			this.pairing = AtePairingOverBarretoNaehrigCurveFactory.getPairing(PairingTypes.TYPE_3, "TPM_ECC_BN_P256");
+			genG1x = new BigInteger("1");
+			genG1y = new BigInteger("2");
+			genG2xa = new BigInteger("114909019869825495805094438766505779201460871441403689227802685522624680861435");
+			genG2xb = new BigInteger("35574363727580634541930638464681913209705880605623913174726536241706071648811");
+			genG2ya = new BigInteger("65076021719150302283757931701622350436355986716727896397520706509932529649684");
+			genG2yb = new BigInteger("113380538053789372416298017450764517685681349483061506360354665554452649749368");
+			break;
+		}
+		case TPM_ECC_BN_P638: {
+			//u = new BigInteger("365375408992443362629982744420548242302862098433");
+			//b = new BigInteger("257");
+			this.pairing = AtePairingOverBarretoNaehrigCurveFactory.getPairing(PairingTypes.TYPE_3, "TPM_ECC_BN_P638");
+			genG1x = new BigInteger("641593209463000238284923228689168801117629789043238356871360716989515584497239494051781991794253619096481315470262367432019698642631650152075067922231951354925301839708740457083469793717125222");
+			genG1y = new BigInteger("16");
+			genG2xa = new BigInteger("192492098325059629927844609092536807849769208589403233289748474758010838876457636072173883771602089605233264992910618494201909695576234119413319303931909848663554062144113485982076866968711247");
+			genG2xb = new BigInteger("166614418891499184781285132766747495170152701259472324679873541478330301406623174002502345930325474988134317071869554535111092924719466650228182095841246668361451788368418036777197454618413255");
+			genG2ya = new BigInteger("622964952935200827531506751874167806262407152244280323674626687789202660794092633841098984322671973226667873503889270602870064426165592237410681318519893784898821343051339820566224981344169470");
+			genG2yb = new BigInteger("514285963827225043076463721426569583576029220880138564906219230942887639456599654554743732087558187149207036952474092411405629612957921369286372038525830610755207588843864366759521090861911494");
+			break;
+		}
+		case ECC_BN_DSD_P256: {
+			//u = new BigInteger("6917529027641089837");
+			//b = new BigInteger("3");
+			this.pairing = AtePairingOverBarretoNaehrigCurveFactory.getPairing(PairingTypes.TYPE_3, "ECC_BN_DSD_P256");
+			genG1x = new BigInteger("1");
+			genG1y = new BigInteger("2");
+			genG2xa = new BigInteger("73481346555305118071940904527347990526214212698180576973201374397013567073039");
+			genG2xb = new BigInteger("28955468426222256383171634927293329392145263879318611908127165887947997417463");
+			genG2ya = new BigInteger("3632491054685712358616318558909408435559591759282597787781393534962445630353");
+			genG2yb = new BigInteger("60960585579560783681258978162498088639544584959644221094447372720880177666763");
+			break;
+		}
+		case ECC_BN_ISOP512: {
+			//u = new BigInteger("128935115591136839671669293643286708227");
+			//b = new BigInteger("3");
+			this.pairing = AtePairingOverBarretoNaehrigCurveFactory.getPairing(PairingTypes.TYPE_3, "ECC_BN_ISOP512");
+			genG1x = new BigInteger("1");
+			genG1y = new BigInteger("2");
+			genG2xa = new BigInteger("3094648157539090131026477120117259896222920557994037039545437079729804516315481514566156984245473190248967907724153072490467902779495072074156718085785269");
+			genG2xb = new BigInteger("3776690234788102103015760376468067863580475949014286077855600384033870546339773119295555161718985244561452474412673836012873126926524076966265127900471529");
+			genG2ya = new BigInteger("7593872605334070150001723245210278735800573263881411015285406372548542328752430917597485450360707892769159214115916255816324924295339525686777569132644242");
+			genG2yb = new BigInteger("9131995053349122285871305684665648028094505015281268488257987110193875868585868792041571666587093146239570057934816183220992460187617700670514736173834408");
+			break;
+		}
+		default:
+            throw new IllegalArgumentException("Unknown BNCurveInstantiation: " + instantiation);
+		}
+		//this.pairing = AtePairingOverBarretoNaehrigCurveFactory.getPairing(PairingTypes.TYPE_3, u, b, PrimeCurveTypes.JACOBIAN);
+		//this.pairing = AtePairingOverBarretoNaehrigCurveFactory.getPairing(PairingTypes.TYPE_3, "TPM_ECC_BN_P256 ");
 		this.order = this.pairing.getGroup1().getOrder();
+		this.pairing.getGroup1().getField();
+		PrimeCharacteristicField primeField = (PrimeCharacteristicField)this.pairing.getGroup1().getField();
+		this.genG1 = this.pairing.getGroup1().newPoint(
+				primeField.newElement(this.bigIntegerToB(genG1x)), 
+				primeField.newElement(this.bigIntegerToB(genG1y)));
+		QuadraticExtensionField qeField = (QuadraticExtensionField)this.pairing.getGroup2().getField();
+		AbstractPrimeField baseField = qeField.getBaseField();
+		this.genG2 = this.pairing.getGroup2().newPoint(
+				qeField.newElement(
+						baseField.newElement(this.bigIntegerToB(genG2xa)), 
+						baseField.newElement(this.bigIntegerToB(genG2xb))), 
+				qeField.newElement(
+						baseField.newElement(this.bigIntegerToB(genG2ya)), 
+						baseField.newElement(this.bigIntegerToB(genG2yb))));
 	}
 	
 	/**
@@ -84,8 +131,7 @@ public class BNCurve {
 	}
 	
 	/**
-	 * Get the number of bytes required to denote each affine coordinate
-	 * @return
+	 * @return the number of bytes required to denote each affine coordinate
 	 */
 	public int byteLength() {
 		return (int) Math.ceil(this.pairing.getGroup1().getField().getFieldSize()/8.0);
@@ -95,14 +141,14 @@ public class BNCurve {
 	 * @return The generator the group G_1
 	 */
 	public ECPoint getG1() {
-		return this.pairing.getGroup1().getGenerator();
+		return this.genG1;
 	}
 	
 	/**
 	 * @return The generator the group G_2
 	 */
 	public ECPoint getG2() {
-		return this.pairing.getGroup2().getGenerator();
+		return this.genG2;
 	}
 	
 	/**
@@ -114,16 +160,7 @@ public class BNCurve {
 	public ExtensionFieldElement pair(ECPoint p1, ECPoint p2) {
 		return this.pairing.pair(p1, p2);
 	}
-	
-	/**
-	 * Hashes a byte array into an element of G_1
-	 * @param preimage byte array to be hashed
-	 * @return Hash output, element of G_1
-	 */
-	public ECPoint hashToG1(byte[] preimage) {
-		return pairing.getGroup1().hashToPoint(preimage);
-	}
-	
+
 	/**
 	 * Get values statistically close to uniformly at random in integers between 0 and the order of the group
 	 * The parameter STAT_INDIST_PARAM governs how close the value must be to uniform.
@@ -202,11 +239,11 @@ public class BNCurve {
 	public byte[] point2ToBytes(ECPoint point) {
 		byte[] ret = new byte[4*this.byteLength() + 1];
 		ret[0] = (byte)4;
-
+		
 		if(!point.isNeutralPoint()) {
 			if(!point.isScaled()) {
 				point.scalePoint();
-			}
+			}		
 			PrimeFieldElement[] xValues = ((QuadraticExtensionFieldElement)point.getCoordinate().getX()).getValuesRecursive();
 			PrimeFieldElement[] yValues = ((QuadraticExtensionFieldElement)point.getCoordinate().getY()).getValuesRecursive();
 			System.arraycopy(this.bigIntegerToB(xValues[0].toBigInteger()), 0, ret, 1, this.byteLength());
@@ -232,7 +269,7 @@ public class BNCurve {
 		}
 		else {
 			QuadraticExtensionField field = (QuadraticExtensionField)this.pairing.getGroup2().getField();
-			PrimeField baseField = field.getBaseField();
+			AbstractPrimeField baseField = field.getBaseField();
 			
 			PrimeFieldElement x1 = baseField.newElement(Arrays.copyOfRange(encoding, 1, 1+this.byteLength()));
 			PrimeFieldElement x2 = baseField.newElement(Arrays.copyOfRange(encoding, 1+this.byteLength(), 1+2*this.byteLength()));
@@ -272,8 +309,8 @@ public class BNCurve {
 	
 	/**
 	 * Decodes a BigInteger from its byte array encoding
-	 * @param encoding
-	 * @return
+	 * @param a BigInteger encoded as bytes
+	 * @return the decoded BigInteger 
 	 */
 	public BigInteger bigIntegerFromB(byte[] encoding) {
 		if(encoding.length != this.byteLength()) {
@@ -312,6 +349,11 @@ public class BNCurve {
 		return new BigInteger(this.hash(preimageArray)).mod(this.getOrder());
 	}
 	
+	/**
+	 * Merge a number of byte arrays into one array
+	 * @param arrays the arrays to be merged
+	 * @return one array that is all input arrays are merged together
+	 */
 	public static byte[] mergeByteArrays(byte[]... arrays) {
 		int length = 0;
 		for(byte[] array : arrays) {

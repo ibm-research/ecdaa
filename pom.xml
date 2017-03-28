@@ -4,7 +4,7 @@
 	<groupId>com.ibm.zurich</groupId>
 	<artifactId>ecdaa</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<name>ecdaa</name>
 	<url>https://github.com/ibm-research/ecdaa</url>
 	<dependencies>
@@ -16,18 +16,13 @@
 		</dependency>
 		<dependency>
 			<groupId>at.tugraz.iaik</groupId>
-			<artifactId>jce-full</artifactId>
+			<artifactId>jce</artifactId>
 			<version>5.3</version>
 		</dependency>
 		<dependency>
 			<groupId>at.tugraz.iaik</groupId>
 			<artifactId>eccelerate</artifactId>
-			<version>3.01</version>
-		</dependency>
-		<dependency>
-			<groupId>at.tugraz.iaik</groupId>
-			<artifactId>eccelerate-addon</artifactId>
-			<version>3.01</version>
+			<version>4.01</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.code.gson</groupId>

@@ -51,9 +51,11 @@ public class Main {
 	public static String VERSION 	= "version";
 	public static String USECURVE	= "usecurve";
 	public static String VERIFY 	= "verify";
-	public static String KEYGEN 	= "keygen";
+	public static String IKEYGEN 	= "ikeygen";
+	public static String AUTHKEYGEN	= "authkeygen";
 	public static String SIGN 		= "sign";
-	public static String JOIN 		= "join";
+	public static String JOIN1 		= "join1";
+	public static String JOIN2 		= "join2";
 		
 	public static void main(String[] args) throws NoSuchAlgorithmException, IOException {		
 		Option help = new Option(HELP, "print this message");
@@ -66,34 +68,40 @@ public class Main {
 				.argName("curve")
 				.desc("Specify the BN Curve. Options: " + curveOptions())
 				.build();
-		Option keygen = Option.builder(KEYGEN)
+		Option isskeygen = Option.builder(IKEYGEN)
 				.numberOfArgs(3)
-				.argName("pkFile><skFile><rlFile")
+				.argName("ipk><isk><RL")
 				.desc("Generate Issuer key pair and empty revocation list and store it in files")
 				.build();
-		Option join = Option.builder(JOIN)
+		Option join1 = Option.builder(JOIN1)
+				.numberOfArgs(3)
+				.argName("ipk><authsk><msg1")
+				.desc("Create an authenticator secret key and perform the first step of the join protocol")
+				.build();
+		Option join2 = Option.builder(JOIN2)
 				.numberOfArgs(4)
-				.argName("issuerPk><issuerSk><msg1><msg2")
-				.desc("Let an authenticator join")
+				.argName("ipk><isk><msg1><msg2")
+				.desc("Complete the join protocol")
 				.build();
 		Option verify = Option.builder(VERIFY)
 				.numberOfArgs(5)
-				.argName("issuerPk><signature><krd><appId><RL")
+				.argName("ipk><sig><krd><appId><RL")
 				.desc("Verify a signature")
 				.build();
 		Option sign = Option.builder(SIGN)
-				.numberOfArgs(5)
-				.argName("issuerPk><issuerSk><appId><krd><sigFile")
+				.numberOfArgs(6)
+				.argName("ipk><authsk><msg2><appId><krd><sig")
 				.desc("create a signature")
 				.build();
 		
 		options.addOption(help);
 		options.addOption(version);
 		options.addOption(useCurve);
-		options.addOption(keygen);
+		options.addOption(isskeygen);
 		options.addOption(sign);
 		options.addOption(verify);
-		options.addOption(join);
+		options.addOption(join1);
+		options.addOption(join2);
 		
 		HelpFormatter formatter = new HelpFormatter();		
 		CommandLineParser parser = new DefaultParser();
@@ -101,26 +109,28 @@ public class Main {
 		//FIXME Choose a proper instantiation of SecureRandom depending on the platform
 		SecureRandom random = new SecureRandom();
 		Base64.Encoder encoder = Base64.getUrlEncoder();
+		Base64.Decoder decoder = Base64.getUrlDecoder();
 	    try {
 			CommandLine line = parser.parse(options, args);
 			BNCurveInstantiation instantiation = null;
 			BNCurve curve = null;
 			if(line.hasOption(HELP) || line.getOptions().length == 0) {
-				formatter.printHelp(USAGE, options );
+				formatter.printHelp(USAGE, options);
 			}
-			if(line.hasOption(VERSION)) {
+			else if(line.hasOption(VERSION)) {
 				System.out.println("Version " + Main.class.getPackage().getImplementationVersion());
 			}
-			if(line.hasOption(USECURVE)) {
+			else if(line.hasOption(USECURVE)) {
 				instantiation = BNCurveInstantiation.valueOf(line.getOptionValue(USECURVE));
 				curve = new BNCurve(instantiation);
 			}
 			else {
 				System.out.println("Specify the curve to use.");
+				return;
 			}
 			
-			if(line.hasOption(KEYGEN)) {
-				String[] optionValues = line.getOptionValues(KEYGEN);
+			if(line.hasOption(IKEYGEN)) {
+				String[] optionValues = line.getOptionValues(IKEYGEN);
 
 				// Create secret key
 				IssuerSecretKey sk = Issuer.createIssuerKey(curve, random);
@@ -136,23 +146,31 @@ public class Main {
 				writeToFile(Verifier.revocationListToJson(rl, curve), optionValues[2]);
 			}
 			else if(line.hasOption(SIGN)) {
-				String[] optionValues = line.getOptionValues(SIGN);
+				//("ipk><authsk><msg2><appId><krd><sig")
 
-				// create issuer with the specified key
-				IssuerPublicKey pk = new IssuerPublicKey(curve, readStringFromFile(optionValues[0]));
-				IssuerSecretKey sk = new IssuerSecretKey(curve, readStringFromFile(optionValues[1]));
-				Issuer iss = new Issuer(curve, sk, pk);
+				String[] optionValues = line.getOptionValues(SIGN);
+				IssuerPublicKey ipk = new IssuerPublicKey(curve, readStringFromFile(optionValues[0]));
+				
+				BigInteger authsk = curve.bigIntegerFromB(decoder.decode(readFromFile(optionValues[1])));
+				JoinMessage2 msg2 = new JoinMessage2(curve, readStringFromFile(optionValues[2]));
 				
 				// setup a new authenticator
-				Authenticator auth = new Authenticator(curve, iss.pk);
-				auth.EcDaaJoin2(iss.EcDaaIssuerJoin(auth.EcDaaJoin1(iss.GetNonce())));
-				EcDaaSignature sig = auth.EcDaaSign(optionValues[2]);
-				
-				// Write krd to file
-				writeToFile(sig.krd, optionValues[3]);
-				
-				// Write signature to file
-				writeToFile(sig.encode(curve), optionValues[4]);
+				Authenticator auth = new Authenticator(curve, ipk, authsk);
+				auth.EcDaaJoin1(curve.getRandomModOrder(random));
+				if(auth.EcDaaJoin2(msg2)) {
+					EcDaaSignature sig = auth.EcDaaSign(optionValues[3]);
+					
+					// Write krd to file
+					writeToFile(sig.krd, optionValues[4]);
+					
+					// Write signature to file
+					writeToFile(sig.encode(curve), optionValues[5]);
+
+					System.out.println("Signature written to " + optionValues[5]);
+				}
+				else {
+					System.out.println("JoinMsg2 invalid");
+				}
 			}
 			else if(line.hasOption(VERIFY)) {
 				Verifier ver = new Verifier(curve);
@@ -169,8 +187,19 @@ public class Main {
 						readStringFromFile(rlPath), curve));
 				System.out.println("Signature is " + (valid ? "valid." : "invalid."));
 			}
-			else if(line.hasOption(JOIN)) {
-				String[] optionValues = line.getOptionValues(JOIN);
+			else if(line.hasOption(JOIN1)) {
+				String[] optionValues = line.getOptionValues(JOIN1);
+				IssuerPublicKey ipk = new IssuerPublicKey(curve, readStringFromFile(optionValues[0]));
+				
+				// Create authenticator key
+				BigInteger sk = curve.getRandomModOrder(random);
+				writeToFile(encoder.encodeToString(curve.bigIntegerToB(sk)), optionValues[1]);
+				Authenticator auth = new Authenticator(curve, ipk, sk);
+				JoinMessage1 msg1 = auth.EcDaaJoin1(curve.getRandomModOrder(random));
+				writeToFile(msg1.toJson(curve), optionValues[2]);
+			}
+			else if(line.hasOption(JOIN2)) {
+				String[] optionValues = line.getOptionValues(JOIN2);
 				
 				// create issuer with the specified key
 				IssuerPublicKey pk = new IssuerPublicKey(curve, readStringFromFile(optionValues[0]));
@@ -236,9 +265,11 @@ public class Main {
 		}
 	}
 	
-	private static String readStringFromFile(String fileName) throws IOException {
-		byte[] bytes = Files.readAllBytes(Paths.get(fileName));
-		return new String(bytes, StandardCharsets.UTF_8);
+	private static byte[] readFromFile(String fileName) throws IOException {
+		return Files.readAllBytes(Paths.get(fileName));
 	}
-
+	
+	private static String readStringFromFile(String fileName) throws IOException {
+		return new String(readFromFile(fileName), StandardCharsets.UTF_8);
+	}
 }
