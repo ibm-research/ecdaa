@@ -19,7 +19,7 @@ mvn clean install
 ```
 
 ### Installing IAIK
-This project uses the IAIK JCE and ECCelerate crypto libraries, which are supplied with this project.
+This project uses the IAIK JCE and ECCelerate crypto libraries, which are supplied with this project under the open source project license [3].
 Install the jars into the local maven repository with the following commands:
 ```bash
 mvn install:install-file -Dfile=iaik/iaik_jce.jar -DgroupId=at.tugraz.iaik -DartifactId=jce -Dversion=5.3 -Dpackaging=jar
@@ -92,3 +92,5 @@ java -jar target/ecdaa-x.x.x-jar-with-dependencies.jar -verify ipk sig krd appid
 [1] https://fidoalliance.org/specs/fido-uaf-v1.1-id-20170202/fido-ecdaa-algorithm-v1.1-id-20170202.html
 
 [2] J. Camenisch, M. Drijvers and A. Lehmann. Universally Composable Direct Anonymous Attestation. PKC 2016, full version at https://eprint.iacr.org/2015/1246.
+
+[3] https://jce.iaik.tugraz.at/sic/Sales/Licences/License_for_Open_Source_Projects
