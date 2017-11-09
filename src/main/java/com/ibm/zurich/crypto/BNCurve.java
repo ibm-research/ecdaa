@@ -170,7 +170,7 @@ public class BNCurve {
 	public BigInteger getRandomModOrder(SecureRandom random) {
 		byte[] randomBytes = new byte[(this.order.bitLength()+STAT_INDIST_PARAM)/8];
 		random.nextBytes(randomBytes);
-		return new BigInteger(randomBytes).mod(this.order);
+		return new BigInteger(1, randomBytes).mod(this.order);
 	}
 	
 	/**
@@ -346,7 +346,7 @@ public class BNCurve {
 	 * @throws NoSuchAlgorithmException
 	 */
 	public BigInteger hashModOrder(byte[]... preimageArray) throws NoSuchAlgorithmException {
-		return new BigInteger(this.hash(preimageArray)).mod(this.getOrder());
+		return new BigInteger(1, this.hash(preimageArray)).mod(this.getOrder());
 	}
 	
 	/**
